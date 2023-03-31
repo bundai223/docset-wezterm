@@ -1,8 +1,13 @@
 artifact_id := 625118357
+docset_path := wezterm.docset
 
 docset: build/artifact_${artifact_id}
 	@echo 'do not make docset!'
-	mkdir -p build/wezterm-docset/Contents/Resources/Documents
+	@mkdir -p ${docset_path}/Contents/Resources/Documents
+	@cp Info.plist ${docset_path}/Contents
+	@cp build/artifact_${artifact_id}/*.css ${docset_path}/Contents/Resources/Documents/
+	@cp build/artifact_${artifact_id}/*.js ${docset_path}/Contents/Resources/Documents/
+	@cp -r build/artifact_${artifact_id}/javascript ${docset_path}/Contents/Resources/Documents/
 
 artifacts:
 	# 将来はここからartifactを決定する
@@ -40,3 +45,4 @@ build:
 
 clean:
 	rm -rf ./build
+	rm -rf ./${docset_path}
