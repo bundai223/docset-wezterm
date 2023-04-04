@@ -6,9 +6,7 @@ require 'pathname'
 require 'nokogiri'
 require 'sqlite3'
 
-REPOS_NAME = 'paperjs.github.io'
-REPOS_URL = "https://github.com/paperjs/#{REPOS_NAME}"
-DOCSET_DIR_NAME = 'Paperjs.docset'
+DOCSET_DIR_NAME = 'wezterm.docset'
 TEMPLATE_DIR_NAME = 'template'
 FONT_FAMILY_SANS = 'font-family: Verdana, sans-serif;'
 FONT_FAMILY_MONO = 'font-family: Menlo, monospace;'
@@ -66,136 +64,120 @@ class DocsetBuilder
   end
 
   def build
-    clone_repos
-    copy_repos_files
-    copy_template_files
-    rewrite_files
+    # copy_repos_files
+    # copy_template_files
+    # rewrite_files
     create_index
   end
 
-  def clone_repos
-    if !File.exist?(@env.repos_dir)
-      puts('Cloning repository...')
-      system("git clone #{REPOS_URL} #{@env.repos_dir}")
-      puts('done.')
-    else
-      puts('Updating repository...')
-      Dir.chdir(@env.repos_dir) do
-        system('git fetch --all')
-        system('git reset --hard origin/master')
-      end
-      puts('done.')
-    end
-  end
+  # def copy_repos_files
+  #   FileUtils.mkdir_p(@docset.documents_dir) unless File.exist?(@docset.documents_dir)
+  #
+  #   @repos.each_file do |filename|
+  #     src_path = File.join(@repos.home_dir, filename)
+  #     dst_path = File.join(@docset.documents_dir, filename)
+  #
+  #     if File.exist?(dst_path)
+  #       print('Cleaning docset directory...')
+  #       FileUtils.rm_r(dst_path)
+  #       puts('done.')
+  #     end
+  #
+  #     print("Copying #{src_path}...")
+  #     FileUtils.cp_r(src_path, dst_path)
+  #     puts('done.')
+  #   end
+  # end
 
-  def copy_repos_files
-    FileUtils.mkdir_p(@docset.documents_dir) unless File.exist?(@docset.documents_dir)
+  # def copy_template_files
+  #   print('Copying template files...')
+  #
+  #   # Copy additional CSS
+  #   src_path = File.join(@env.template_dir, 'docset.css')
+  #   dst_path = File.join(@docset.documents_dir, 'docset.css')
+  #   FileUtils.cp(src_path, dst_path)
+  #
+  #   # Copy Info.plist
+  #   src_path = File.join(@env.template_dir, 'Info.plist')
+  #   dst_path = File.join(@docset.contents_dir, 'Info.plist')
+  #   FileUtils.cp(src_path, dst_path)
+  #
+  #   puts('done.')
+  # end
 
-    @repos.each_file do |filename|
-      src_path = File.join(@repos.home_dir, filename)
-      dst_path = File.join(@docset.documents_dir, filename)
+  # def rewrite_files
+  #   @docset.each_document('html') do |path|
+  #     rewrite_html(path)
+  #   end
+  #
+  #   @docset.each_document('css') do |path|
+  #     rewrite_css(path)
+  #   end
+  # end
 
-      if File.exist?(dst_path)
-        print('Cleaning docset directory...')
-        FileUtils.rm_r(dst_path)
-        puts('done.')
-      end
-
-      print("Copying #{src_path}...")
-      FileUtils.cp_r(src_path, dst_path)
-      puts('done.')
-    end
-  end
-
-  def copy_template_files
-    print('Copying template files...')
-
-    # Copy additional CSS
-    src_path = File.join(@env.template_dir, 'docset.css')
-    dst_path = File.join(@docset.documents_dir, 'docset.css')
-    FileUtils.cp(src_path, dst_path)
-
-    # Copy Info.plist
-    src_path = File.join(@env.template_dir, 'Info.plist')
-    dst_path = File.join(@docset.contents_dir, 'Info.plist')
-    FileUtils.cp(src_path, dst_path)
-
-    puts('done.')
-  end
-
-  def rewrite_files
-    @docset.each_document('html') do |path|
-      rewrite_html(path)
-    end
-
-    @docset.each_document('css') do |path|
-      rewrite_css(path)
-    end
-  end
-
-  def rewrite_html(path)
-    print("Formatting #{File.dirname(path)}...")
-
-    lines = []
-    File.open(path) do |f|
-      while (line = f.gets)
-        # Rewrite absolute paths
-        line.gsub!(%r{/assets/}, '../../assets/')
-        line.gsub!(%r{/reference/}, '../../reference/')
-
-        lines << line
-      end
-    end
-
-    # Insert additional CSS
-    lines.each_index do |index|
-      if lines[index].strip == '</head>'
-        lines.insert(index, '<link rel="stylesheet" href="../../docset.css"/>')
-        break
-      end
-    end
-
-    File.open(path, 'w') do |f|
-      f.write(lines.join(''))
-    end
-
-    puts('done.')
-  end
-
-  def rewrite_css(path)
-    print("Formatting #{File.dirname(path)}...")
-
-    lines = []
-    File.open(path) do |f|
-      while (line = f.gets)
-        # Rewrite font family
-        # Reference htmls use web fonts placed at http://assets.paperjs.org/,
-        # but cannot access them by Cross-Origin policy.
-        # So replace them with system default ones.
-        line.gsub!(/font-family:.+sans-serif;/, FONT_FAMILY_SANS)
-        line.gsub!(/font-family:.+monospace;/, FONT_FAMILY_MONO)
-        line.gsub!(/font-family:.+";/, FONT_FAMILY_MISC)
-
-        # Rewrite font size
-        # Default font size is largish for dash documentation
-        # so make them smaller
-        line.gsub!(/((?:font-size|line-height):\s*)([0-9.]+)/) do |_s|
-          format('%s%.2f', ::Regexp.last_match(1), (::Regexp.last_match(2).to_f * FONT_SIZE_FACTOR))
-        end
-        line.gsub!(/(font-size:\s*)([0-9.]+)/) do |_s|
-          format('%s%.2f', ::Regexp.last_match(1), (::Regexp.last_match(2).to_f * FONT_SIZE_FACTOR))
-        end
-
-        lines << line
-      end
-    end
-
-    File.open(path, 'w') do |f|
-      f.write(lines.join(''))
-    end
-
-    puts('done.')
-  end
+  # def rewrite_html(path)
+  #   print("Formatting #{File.dirname(path)}...")
+  #
+  #   lines = []
+  #   File.open(path) do |f|
+  #     while (line = f.gets)
+  #       # Rewrite absolute paths
+  #       line.gsub!(%r{/assets/}, '../../assets/')
+  #       line.gsub!(%r{/reference/}, '../../reference/')
+  #
+  #       lines << line
+  #     end
+  #   end
+  #
+  #   # Insert additional CSS
+  #   lines.each_index do |index|
+  #     if lines[index].strip == '</head>'
+  #       lines.insert(index, '<link rel="stylesheet" href="../../docset.css"/>')
+  #       break
+  #     end
+  #   end
+  #
+  #   File.open(path, 'w') do |f|
+  #     f.write(lines.join(''))
+  #   end
+  #
+  #   puts('done.')
+  # end
+  #
+  # def rewrite_css(path)
+  #   print("Formatting #{File.dirname(path)}...")
+  #
+  #   lines = []
+  #   File.open(path) do |f|
+  #     while (line = f.gets)
+  #       # Rewrite font family
+  #       # Reference htmls use web fonts placed at http://assets.paperjs.org/,
+  #       # but cannot access them by Cross-Origin policy.
+  #       # So replace them with system default ones.
+  #       line.gsub!(/font-family:.+sans-serif;/, FONT_FAMILY_SANS)
+  #       line.gsub!(/font-family:.+monospace;/, FONT_FAMILY_MONO)
+  #       line.gsub!(/font-family:.+";/, FONT_FAMILY_MISC)
+  #
+  #       # Rewrite font size
+  #       # Default font size is largish for dash documentation
+  #       # so make them smaller
+  #       line.gsub!(/((?:font-size|line-height):\s*)([0-9.]+)/) do |_s|
+  #         format('%s%.2f', ::Regexp.last_match(1), (::Regexp.last_match(2).to_f * FONT_SIZE_FACTOR))
+  #       end
+  #       line.gsub!(/(font-size:\s*)([0-9.]+)/) do |_s|
+  #         format('%s%.2f', ::Regexp.last_match(1), (::Regexp.last_match(2).to_f * FONT_SIZE_FACTOR))
+  #       end
+  #
+  #       lines << line
+  #     end
+  #   end
+  #
+  #   File.open(path, 'w') do |f|
+  #     f.write(lines.join(''))
+  #   end
+  #
+  #   puts('done.')
+  # end
 
   def create_index
     print('Creating docset index...')
@@ -239,7 +221,7 @@ class DocumentParser
     doc = Nokogiri::HTML.parse(html, nil)
 
     # Class
-    name = doc.css('article h1').text
+    name = doc.css('h1').text
     type = SPECIAL_TYPES.fetch(name, 'Class')
     yield name, type, ''
 
@@ -285,17 +267,18 @@ class DocsetIndex
 end
 
 class Environment
-  attr_accessor :repos_dir, :docset_dir, :template_dir
+  attr_accessor :repos_dir, :docset_dir # , :template_dir
 end
 
 if __FILE__ == $0
   script_home = __dir__
 
   env = Environment.new
-  env.repos_dir = File.join(script_home, REPOS_NAME)
+  # env.repos_dir = File.join(script_home, REPOS_NAME)
+  env.repos_dir = File.join(script_home, 'build', 'artifact')
   env.docset_dir = File.join(script_home, DOCSET_DIR_NAME)
-  env.template_dir = File.join(script_home, TEMPLATE_DIR_NAME)
+  # env.template_dir = File.join(script_home, TEMPLATE_DIR_NAME)
 
-  # builder = DocsetBuilder.new(env)
-  # builder.build
+  builder = DocsetBuilder.new(env)
+  builder.build
 end

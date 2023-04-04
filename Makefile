@@ -4,9 +4,7 @@ docset: build/artifact
 	@echo 'do not make docset!'
 	@mkdir -p ${docset_path}/Contents/Resources/Documents
 	@cp Info.plist ${docset_path}/Contents
-	@cp build/artifact/*.css ${docset_path}/Contents/Resources/Documents/
-	@cp build/artifact/*.js ${docset_path}/Contents/Resources/Documents/
-	@cp -r build/artifact/javascript ${docset_path}/Contents/Resources/Documents/
+	@cp -r build/artifact/* ${docset_path}/Contents/Resources/Documents/
 
 build/artifact: build/artifact.zip
 	@echo 'unzip archive!'
