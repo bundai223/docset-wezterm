@@ -1,0 +1,17 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    nokogiri (1.14.2-x86_64-linux)
+      racc (~> 1.4)
+    racc (1.6.2)
+    sqlite3 (1.6.2-x86_64-linux)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  nokogiri
+  sqlite3
+
+BUNDLED WITH
+   2.3.15
