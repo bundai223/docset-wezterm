@@ -210,8 +210,10 @@ end
 class DocumentParser
   SPECIAL_TYPES = {
     'Global Scope' => 'Global'
-  }
+  }.freeze
 
+  # htmlを解析するメソッド
+  # @param path [string] htmlのあるpath
   def self.parse(path)
     html = nil
     File.open(path) do |f|
@@ -221,13 +223,13 @@ class DocumentParser
     doc = Nokogiri::HTML.parse(html, nil)
 
     # Class
-    name = doc.css('h1').text
+    name = doc.css('h1').text.sub(/[¶?]/, '')
     type = SPECIAL_TYPES.fetch(name, 'Class')
     yield name, type, ''
 
     # Methods
     doc.css('.member').each do |node|
-      name = node.css('.member-link').text.strip
+      name = node.css('.member-link').text.sub(/[¶?]/, '').strip
       hash = node.attribute('id').to_s
 
       yield name, 'Method', hash
